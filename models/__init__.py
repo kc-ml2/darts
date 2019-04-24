@@ -1,7 +1,3 @@
-import  torch
-from    torch import nn
-import  torch.nn.functional as F
-import  numpy as np
-from    torch import optim, autograd
+__all__ = ['search','operation','genotypes']
 
-print("imported models")
+print("imported models lib")
