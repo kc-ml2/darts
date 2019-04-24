@@ -2,6 +2,9 @@
 # coding: utf-8
 
 
+# In[2]:
+
+
 import os,sys,time,glob
 import numpy as np
 import utils
@@ -30,7 +33,7 @@ parser.add_argument('--wd',type=float, default=3e-4, help='weight decay')
 parser.add_argument('--report_freq', type=float, default=50, help='report frequency')
 parser.add_argument('--gpu', type=int, default=0, help='gpu device id')
 parser.add_argument('--epochs', type=int, default=50, help='num of training epochs')
-parser.add_argument('--init_ch',type=int, default=16, help='num of init channels')
+parser.add_argument('--init_ch', type=int, default=16, help='num of init channels')
 parser.add_argument('--layers',type=int, default=8, help='total number of layers')
 parser.add_argument('--model_path',type=str, default='saved_models', help='path to save the model')
 parser.add_argument('--cutout',action='store_true', default=False, help='use cutout')
@@ -42,10 +45,10 @@ parser.add_argument('--grad_clip', type=float, default=5, help='gradient clippin
 parser.add_argument('--train_portion', type=float, default=0.5, help='portion of training/val splitting')
 parser.add_argument('--unrolled', action='store_true', default=False, help='use one-step unfolled validation loss')
 parser.add_argument('--arch_lr', type=float, default=3e-4, help='learning rate for arch encoding')
-parger.add_argument('--arch_wd', type=float, default=1e-3, help='weight decay for arch encoding')
+parser.add_argument('--arch_wd', type=float, default=1e-3, help='weight decay for arch encoding')
 args = parser.parse_args()
 
-arge.exp_path += str(args.gpu)
+args.exp_path += str(args.gpu)
 utils.create_exp_dir(args.exp_path, scripts_to_save=glob.glob('*.py'))
 
 log_format='%(asctime)s %(message)s'
@@ -68,7 +71,7 @@ def main():
     cudnn.enabled= True
     torch.manual_seed(args.seed)
     
-    total, uset = os.opoen('nvidia-smi --query-gpu=memory.total,memory.used --format=csv,nounits,noheader'
+    total, used = os.popen('nvidia-smi --query-gpu=memory.total,memory.used --format=csv,nounits,noheader'
                         ).read().split('\n')[args.gpu].split(',')
     total = int(total)
     used = int(used)
@@ -81,7 +84,7 @@ def main():
     logging.info("args = %s"%args)
     
     criterion = nn.CrossEntropyLoss().to(device)
-    model = Network(args.init_ch, 10, args.layers, creterion).to(device)
+    model = Network(args.init_ch, 10, args.layers, criterion).to(device)
     
     logging.info("total param size = %.4f MB",utils.count_parameters_in_MB(model))
     
@@ -98,12 +101,20 @@ def main():
         train_data, batch_size=args.batchsz,
         sampler=torch.utils.data.sampler.SubsetRandomSampler(indices[:split]),
         pin_memory=True, num_workers=2)
-    
+
+#     train_queue = torch.utils.data.DataLoader(
+#         train_data, batch_size=args.batchsz, shuffle=True, pin_memory=True, num_workers=2)
+
+
     valid_queue = torch.utils.data.DataLoader(
         train_data, batch_size=args.batchsz,
         sampler=torch.utils.data.sampler.SubsetRandomSampler(indices[split:]),
         pin_memory=True, num_workers=2)
+
+#     valid_queue = torch.utils.data.DataLoader(
+#         valid_data, batch_size=args.batchsz, shuffle=False, pin_memory=True, num_workers=2)
     
+
     scheduler = optim.lr_scheduler.CosineAnnealingLR(
                     optimizer, float(args.epochs), eta_min=args.lr_min)
     
@@ -113,8 +124,8 @@ def main():
     for epoch in range(args.epochs):
         
         scheduler.step()
-        lf = scheduler.get_lr()[0]
-        logging.info('\nEpoch: %d lf: %e',epoch, lr)
+        lr = scheduler.get_lr()[0]
+        logging.info('\nEpoch: %d lr: %e',epoch, lr)
         
         genotype = model.genotype()
         logging.info('Genotype : %s', genotype)
@@ -206,6 +217,8 @@ def infer(valid_queue, model, criterion):
 if __name__ == '__main__':
     main()
 
+
+# In[ ]:
 
 
 

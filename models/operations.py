@@ -15,7 +15,7 @@ import torch.nn as nn
 OPS = {
     'none' : lambda C, stride, affine: Zero(stride),
     'avg_pool_3x3': lambda C, stride, affine: nn.AvgPool2d(3, stride=stride, padding=1, count_include_pad=False),
-    'max_pool_3x3': lambda C, stride, affine: nn.MaxPool2d(2, stride=stride, padding=1),
+    'max_pool_3x3': lambda C, stride, affine: nn.MaxPool2d(3, stride=stride, padding=1),
     'skip_connect': lambda C, stride, affine: Identity() if stride == 1 else FactorizedReduce(C, C, affine=affine),
     'sep_conv_3x3': lambda C, stride, affine: SepConv(C,C,3,stride, 1, affine=affine),
     'sep_conv_5x5': lambda C, stride, affine: SepConv(C,C,5,stride, 2, affine=affine),
@@ -83,9 +83,9 @@ class SepConv(nn.Module):
             nn.Conv2d(C_in, C_in, kernel_size=1, padding=0, bias=False),
             nn.BatchNorm2d(C_in, affine=affine),
             nn.ReLU(inplace=False),
-            nn.Conv2d(C_in, C_in, kernel_size=kernel_size, stride=stride, padding=padding,
+            nn.Conv2d(C_in, C_in, kernel_size=kernel_size, stride=1, padding=padding,
                       groups=C_in, bias=False),
-            nn.Conv2d(C_in, C_in, kernel_size=1, padding=0, bias=False),
+            nn.Conv2d(C_in, C_out, kernel_size=1, padding=0, bias=False),
             nn.BatchNorm2d(C_out, affine=affine),
         )
     

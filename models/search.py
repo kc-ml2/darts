@@ -23,7 +23,7 @@ class MixedLayer(nn.Module):
         self.layers = nn.ModuleList()
         
         for primitive in PRIMITIVES:
-            layer = OPS[primirive](c, stride, False)
+            layer = OPS[primitive](c, stride, False)
         
             if 'pool' in primitive:
                 layer = nn.Sequential(layer, nn.BatchNorm2d(c, affine=False))
@@ -33,8 +33,10 @@ class MixedLayer(nn.Module):
     def forward(self, x, weights):
         
         res = [w * layer(x) for w,layer in zip(weights, self.layers)]
-        
+#         print('======================================================')
+#         print("forwards debug : ",[ts.shape for ts in res])
         res = sum(res)
+        
         return res
 
 
@@ -71,6 +73,8 @@ class Cell(nn.Module):
         s0 = self.preprocess0(s0)
         s1 = self.preprocess1(s1)
         
+#         print("Cell forwards!")
+        
         states = [s0, s1]
         offset = 0
         
@@ -96,7 +100,7 @@ class Network(nn.Module):
         self.c = c
         self.num_classes = num_classes
         self.layers = layers
-        self.creterion = criterion
+        self.criterion = criterion
         self.steps = steps
         self.multiplier = multiplier
         
@@ -133,7 +137,7 @@ class Network(nn.Module):
         num_ops = len(PRIMITIVES)
             
         self.alpha_normal = nn.Parameter(torch.randn(k, num_ops))
-        self.alpha_reduce = nn.parameter(torch.randn(k, num_ops))
+        self.alpha_reduce = nn.Parameter(torch.randn(k, num_ops))
         with torch.no_grad():
             self.alpha_normal.mul_(1e-3)
             self.alpha_reduce.mul_(1e-3)
@@ -152,8 +156,9 @@ class Network(nn.Module):
     
     def forward(self, x):
         s0 = s1 = self.stem(x)
+#         print("Network forwards!")
         
-        for i, cell in enumerate(self.sells):
+        for i, cell in enumerate(self.cells):
             
             if cell.reduction:
                 weights = F.softmax(self.alpha_reduce, dim=-1)
@@ -170,7 +175,7 @@ class Network(nn.Module):
     
     def loss(self, x, target):
         logits = self(x)
-        return self.creterion(logits, target)
+        return self.criterion(logits, target)
     
     
     def arch_parameters(self):
@@ -203,7 +208,7 @@ class Network(nn.Module):
             return gene
         
         gene_normal = _parse(F.softmax(self.alpha_normal, dim=-1).data.cpu().numpy())
-        gene_reduce = _parse(F.softmax(self.alpht_reduce, dim=-1).data.cpu().numpy())
+        gene_reduce = _parse(F.softmax(self.alpha_reduce, dim=-1).data.cpu().numpy())
         
         concat = range(2+self.steps - self.multiplier, self.steps +2)
         genotype = Genotype(
