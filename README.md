@@ -1,4 +1,4 @@
-# DARTS playground 🧗‍
+# DARTS 🎯 playground 🧗‍
 
 ### This repo is made for ML2's playground projects
 > **🌏 running environment info** <br>
@@ -7,8 +7,7 @@
 
 ### 🚀 How to train?
 > 🎲 You can run DARTS using `python run.py` 
-<br>
-> If you need customize some parameters, check this `python run.py -h`
+If you need customize some parameters, check this `python run.py -h`
 <br>
 
 ### 🔗 Process description.
@@ -21,4 +20,4 @@
 6. and Define arch 
 
 #### 2. under training
-> 1. 
+> 1.
