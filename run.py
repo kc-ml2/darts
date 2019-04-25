@@ -187,7 +187,7 @@ def train(train_queue, valid_queue, model, arch, criterion, optimizer, lr):
 def infer(valid_queue, model, criterion):
     losses = utils.AverageMeter()
     top1 = utils.AverageMeter()
-    top5 = utils.AverateMeter()
+    top5 = utils.AverageMeter()
     
     model.eval()
     
@@ -198,7 +198,7 @@ def infer(valid_queue, model, criterion):
             batchsz = x.size(0)
             
             logits = model(x)
-            loss = criterion(logint, target)
+            loss = criterion(logits, target)
             
             prec1, prec5 = utils.accuracy(logits, target, topk=(1,5))
             losses.update(loss.item(), batchsz)
