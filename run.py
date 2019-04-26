@@ -43,7 +43,7 @@ parser.add_argument('--exp_path', type=str, default='search', help='experiment n
 parser.add_argument('--seed',type=str, default=2, help='set random seed')
 parser.add_argument('--grad_clip', type=float, default=5, help='gradient clipping range')
 parser.add_argument('--train_portion', type=float, default=0.5, help='portion of training/val splitting')
-parser.add_argument('--unrolled', action='store_true', default=False, help='use one-step unfolled validation loss')
+parser.add_argument('--unrolled', action='store_true', default=False, help='use one-step unrolled validation loss')
 parser.add_argument('--arch_lr', type=float, default=3e-4, help='learning rate for arch encoding')
 parser.add_argument('--arch_wd', type=float, default=1e-3, help='weight decay for arch encoding')
 args = parser.parse_args()

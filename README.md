@@ -22,13 +22,13 @@
 
 #### 2. under training
 > 1. start epoch loop
-> 2. -- set lr scheduler 
-> 3. -- set genotype
-> 4. -- start training
-> 5. ---- start step loop
-> 6. ------ dataset setting
-> 7. ------ arch stepping (architecture weight)
-> 8. -------- backward
-> 9. -------- optimizer step
-> 10. ----- model fitting()
-> 11. ----- 
+> 2. ├ set lr scheduler 
+> 3. ├ set genotype
+> 4. ├ start training
+> 5. ⎪ ├ start step loop
+> 6. ⎪ ⎪ ├ dataset setting
+> 7. ⎪ ⎪ ├ arch stepping (architecture weight)
+> 8. ⎪ ⎪ ⎪ ├ backward
+> 9. ⎪ ⎪ ⎪ ├ optimizer step
+> 10.⎪ ⎪ ├ model fitting()
+> 11. and making now...
