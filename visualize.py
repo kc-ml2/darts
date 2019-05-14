@@ -5,7 +5,7 @@ from graphviz import Digraph
 
 def plot(genotype, filename):
     g = Digraph(
-        format='pdf',
+        format='png',
         edge_attr=dict(fontsize='20', fontname="times"),
         node_attr=dict(style='filled', shape='rect', align='center', fontsize='20', height='0.5', width='0.5',
                        penwidth='2', fontname="times"), 
