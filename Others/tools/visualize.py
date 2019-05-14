@@ -44,7 +44,7 @@ def plot(genotype, file_path, caption=None):
                 u = str(j-2)
             
             v = str(i)
-            g.edge(u, v, lagel=op, fillcolor="gray")
+            g.edge(u, v, label=op, fillcolor="gray")
             
     # output node
     g.node("c_{k}", fillcolor='palegoldenrod')

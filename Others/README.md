@@ -5,13 +5,14 @@
 > `python >= 3.6, pytorch == 1.0, and needs CUDA`
 > <br><br>
 > **Requirements** <br>
-> ```
-  torch
-  torchvision
-  graphviz
-  numpy
-  tensorboard
-  tensorboardx```
+>
+> `torch`<br>
+> `torchvision`<br>
+> `graphviz`<br>
+> `numpy`<br>
+> `tensorboard`<br>
+> `tensorboardx`<br>
+
 
 <br>
 
@@ -25,6 +26,7 @@
 > (after run.py execute)`tensorboard --logdir=./searchs/<your_pjt_name>/tb --port=6006`<br>
 >
 > you can visualize with python visualize.py DARTS
+
 <br>
 
 ### 🔗 Process description. 🥚🐣🐥
@@ -36,20 +38,23 @@
 > 5. Set lr scheduler
 > 6. and Define arch 
 
-#### 2. under training (arch searching)
-> 1. start epoch loop
+
+#### 2. under training (alpha searching)
+> 1. ○ start epoch loop
 > 2. ├ set lr scheduler 
 > 3. ├ set genotype
-> 4. ├ start training
-> 5. ⎪ ├ start step loop (batch streaming)
-> 6. ⎪ ⎪ ├ dataset setting
-> 7. ⎪ ⎪ ├ arch stepping (architecture weight)
-> 8. ⎪ ⎪ ⎪ ├ 
-> 8. ⎪ ⎪ ⎪ ├ backward
-> 9. ⎪ ⎪ ⎪ ├ optimizer step
-> 6. ⎪ ⎪ ├ model training
-> 10.⎪ ⎪ ├ model fitting()
-> 11. and making now...
+> 4. ├○ start training (start step loop (batch streaming))
+> 5. │ ├─ dataset setting
+> 6. │ ├○ arch stepping (architecture weight)
+> 7. │ │ ├─ run virtual step & get gradients
+> 8. │ │ ├─ compute hessian
+> 9. │ │ └─ update alpha gradient
+> 10. │ ├─ alpha optimizing
+> 11. │ ├─ model training
+> 12. │ └─ model fitting()
+> 13. └─ validating
+> 14. output best model's genotype
+
 
 #### 3. under training (arch searching)
 

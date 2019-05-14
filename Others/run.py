@@ -197,10 +197,15 @@ def validate(valid_loader, model, epoch, cur_step):
             top5.update(prec5.item(), N)
             
             if step % config.print_freq == 0 or step == len(valid_loader)-1:
+                print("\r",end="",flush=True)
                 logger.info(
                     "Valid: [{:2d}/{}] Step {:03d}/{:03d} Loss {losses.avg:.3f} "
                     "Prec@(1,5) ({top1.avg:.1%}, {top5.avg:.1%})".format(epoch+1, config.epochs, step, len(valid_loader)-1, losses=losses,
                                                                          top1=top1, top5=top5))
+            else :
+                print("\rValid: [{:2d}/{}] Step {:03d}/{:03d} Loss {losses.avg:.3f} "
+                    "Prec@(1,5) ({top1.avg:.1%}, {top5.avg:.1%})".format(epoch+1, config.epochs, step, len(valid_loader)-1, losses=losses,
+                                                                         top1=top1, top5=top5), end="",flush=True)
     tb_writer.add_scalar('val/loss', losses.avg, cur_step)
     tb_writer.add_scalar('val/top1', top1.avg, cur_step)
     tb_writer.add_scalar('val/top5', top5.avg, cur_step)
