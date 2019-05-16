@@ -41,11 +41,11 @@
 
 
 #### 2. under training (alpha searching)
->```
+```
 1. ○ epoch loop
 2. ├─ set lr scheduler 
 3. ├─ set genotype
-4. ├─○ training loop (start step loop (batch streaming))
+4. ├─○ training loop (start stegit p loop (batch streaming))
 5. │ ├─ dataset setting
 6. │ ├─○ arch stepping (architecture weight)
 7. │ │ ├─ run virtual step & get gradients
