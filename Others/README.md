@@ -23,9 +23,10 @@
 > If you need customize some parameters, check `python run.py -h`
 >
 > This process can visualize by using tensorboard <br>
-> (after run.py execute)`tensorboard --logdir=./searchs/<your_pjt_name>/tb --port=6006`<br>
+> (After execute run.py)`tensorboard --logdir=./searchs/<your_pjt_name>/tb --port=6006`<br>
 >
-> you can visualize with python visualize.py DARTS
+> You can visualize arch_graph with `python visualize.py <arch's Genotype>` 
+> 
 
 <br>
 
@@ -40,21 +41,22 @@
 
 
 #### 2. under training (alpha searching)
-> 1. ○ start epoch loop
-> 2. ├ set lr scheduler 
-> 3. ├ set genotype
-> 4. ├○ start training (start step loop (batch streaming))
-> 5. │ ├─ dataset setting
-> 6. │ ├○ arch stepping (architecture weight)
-> 7. │ │ ├─ run virtual step & get gradients
-> 8. │ │ ├─ compute hessian
-> 9. │ │ └─ update alpha gradient
-> 10. │ ├─ alpha optimizing
-> 11. │ ├─ model training
-> 12. │ └─ model fitting()
-> 13. └─ validating
-> 14. output best model's genotype
-
+>```
+1. ○ epoch loop
+2. ├─ set lr scheduler 
+3. ├─ set genotype
+4. ├─○ training loop (start step loop (batch streaming))
+5. │ ├─ dataset setting
+6. │ ├─○ arch stepping (architecture weight)
+7. │ │ ├─ run virtual step & get gradients
+8. │ │ ├─ compute hessian
+9. │ │ └─ update alpha gradient
+10.│ ├─ alpha optimizing
+11.│ ├─ model training
+12.│ └─ model fitting()
+13.└─ validating loop
+14. output best model's genotype
+```
 
 #### 3. under training (arch searching)
 
