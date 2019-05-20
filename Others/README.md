@@ -58,7 +58,8 @@
 14. output best model's genotype
 ```
 
-#### 3. under training (arch searching)
+#### 3. under training (augmenting)
+
 
 
 
