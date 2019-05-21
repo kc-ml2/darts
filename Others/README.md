@@ -17,16 +17,46 @@
 <br>
 
 ### 🚀 How to search and train?
-> 🎲 Simply, you can run DARTS search process with <br> &nbsp;&nbsp;&nbsp;&nbsp; `python run.py --name <your_pjt_name> --dataset <data_NAME> --data_path <your_PATH>` <br><br>
+> #### 🎲 Search process
+> - Simply, you can run DARTS for architecture search process with <br> &nbsp;&nbsp;&nbsp;&nbsp; `python run.py --name <your_pjt_name> --dataset <data_NAME> --data_path <your_PATH>` <br><br>
 > --> ex) `python run.py --name DARTS_test1 --dataset cifar10 --data_path ../data`
-> 
-> If you need customize some parameters, check `python run.py -h`
 >
-> This process can visualize by using tensorboard <br>
-> (After execute run.py)`tensorboard --logdir=./searchs/<your_pjt_name>/tb --port=6006`<br>
 >
-> You can visualize arch_graph with `python visualize.py <arch's Genotype>` 
-> 
+> ---
+>
+> - This process can visualize by using tensorboard <br>
+> (After execute run.py) `tensorboard --logdir=./searchs/<your_pjt_name>/tb --port=6006` <br>
+>
+> - Check localhost:6006(or `<your ip>`:6006) by your browser.
+>
+
+
+<br>
+
+> #### 🎲 Train/Test process 
+> - After finished search or need proving some model architecture, then run <br> &nbsp;&nbsp;&nbsp;&nbsp; `python run_from.py --name <pjt_name> --dataset <data_NAME> --data_path <your_PATH> --genotype <Genotype>` <br><br>
+> --> ex) `python run_from.py --name DARTS_test1 --dataset cifar10 --data_path ../data --genotype Genotype(normal=[[('sep_conv_3x3', 0), ('sep_conv_3x3', 1)], [('skip_connect', 0), ('sep_conv_3x3', 1)], [('skip_connect', 0), ('sep_conv_3x3', 1)], [('sep_conv_3x3', 0), ('sep_conv_3x3', 1)]], normal_concat=range(2, 6), reduce=[[('max_pool_3x3', 0), ('max_pool_3x3', 1)], [('max_pool_3x3', 1), ('skip_connect', 2)], [('skip_connect', 2), ('max_pool_3x3', 1)], [('dil_conv_5x5', 4), ('dil_conv_5x5', 2)]], reduce_concat=range(2, 6))`
+>
+>
+> ---
+>
+> - This process also available visualize by using tensorboard <br>
+> (After execute run_from.py)`tensorboard --logdir=./augment/<your_pjt_name>/tb --port=6007`<br>
+>
+> - Check localhost:6007(or `<your ip>`:6007) by your browser.
+>
+> This process make you can check model(architecture)'s loss and accuracy.
+
+<br>
+
+> #### 🕹 more
+> - You can visualize arch_graph with `python visualize.py <arch's Genotype>` 
+>
+> - Finded `Genotype` is recorded in last line of `search/<your_pjt_name>/<your_pjt_name>.log`
+>
+> - If you need customize some parameters, check `python run.py -h` or `python run_from.py -h`
+>
+
 
 <br>
 
