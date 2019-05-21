@@ -35,7 +35,7 @@
 
 > #### 🎲 Train/Test process 
 > - After finished search or need proving some model architecture, then run <br> &nbsp;&nbsp;&nbsp;&nbsp; `python run_from.py --name <pjt_name> --dataset <data_NAME> --data_path <your_PATH> --genotype <Genotype>` <br><br>
-> --> ex) `python run_from.py --name DARTS_test1 --dataset cifar10 --data_path ../data --genotype Genotype(normal=[[('sep_conv_3x3', 0), ('sep_conv_3x3', 1)], [('skip_connect', 0), ('sep_conv_3x3', 1)], [('skip_connect', 0), ('sep_conv_3x3', 1)], [('sep_conv_3x3', 0), ('sep_conv_3x3', 1)]], normal_concat=range(2, 6), reduce=[[('max_pool_3x3', 0), ('max_pool_3x3', 1)], [('max_pool_3x3', 1), ('skip_connect', 2)], [('skip_connect', 2), ('max_pool_3x3', 1)], [('dil_conv_5x5', 4), ('dil_conv_5x5', 2)]], reduce_concat=range(2, 6))`
+> --> ex)`python run_from.py --name DARTS_test1 --dataset cifar10 --data_path ../data --genotype Genotype(normal=[[('sep_conv_3x3', 0), ('sep_conv_3x3', 1)], [('skip_connect', 0), ('sep_conv_3x3', 1)], [('skip_connect', 0), ('sep_conv_3x3', 1)], [('sep_conv_3x3', 0), ('sep_conv_3x3', 1)]], normal_concat=range(2, 6), reduce=[[('max_pool_3x3', 0), ('max_pool_3x3', 1)], [('max_pool_3x3', 1), ('skip_connect', 2)], [('skip_connect', 2), ('max_pool_3x3', 1)], [('dil_conv_5x5', 4), ('dil_conv_5x5', 2)]], reduce_concat=range(2, 6))`
 >
 >
 > ---
@@ -56,9 +56,12 @@
 >
 > - If you need customize some parameters, check `python run.py -h` or `python run_from.py -h`
 >
-> - result info (The average value of the results)
->
->|mode|avg time|train acc|val acc|env|GPU|params|
+
+<br>
+
+### 🏁 Results (The average value of the results)
+
+|mode|runtime(avg)|train acc|val acc|environment|GPU(single)|params|
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | Search       | 29hr | 99.9% | 91.3% | py3.6 // cuda10 // torch 1.0 | Titan V | epoch=100, dataset=cifar10, workers=12, batch_size=64 |
 | Train/Test   | 8hr  | 98.6% | 96.7% | py3.6 // cuda10 // torch 1.0 | Titan V | epoch=300, dataset=cifar10, workers=16, batch_size=96 |
