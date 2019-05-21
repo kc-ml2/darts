@@ -40,12 +40,12 @@
 >
 > ---
 >
-> - This process also available visualize by using tensorboard <br>
-> (After execute run_from.py)`tensorboard --logdir=./augment/<your_pjt_name>/tb --port=6007`<br>
+> - This process also available visualizing <br>
+> (After execute run_from.py)`tensorboard --logdir=./augments/<your_pjt_name>/tb --port=6007`<br>
 >
 > - Check localhost:6007(or `<your ip>`:6007) by your browser.
 >
-> This process make you can check model(architecture)'s loss and accuracy.
+> This process makes you can check model(architecture)'s loss and accuracy.
 
 <br>
 
@@ -56,26 +56,31 @@
 >
 > - If you need customize some parameters, check `python run.py -h` or `python run_from.py -h`
 >
-
+> - result info (The average value of the results)
+>
+>|mode|avg time|train acc|val acc|env|GPU|params|
+|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Search       | 29hr | 99.9% | 91.3% | py3.6 // cuda10 // torch 1.0 | Titan V | epoch=100, dataset=cifar10, workers=12, batch_size=64 |
+| Train/Test   | 8hr  | 98.6% | 96.7% | py3.6 // cuda10 // torch 1.0 | Titan V | epoch=300, dataset=cifar10, workers=16, batch_size=96 |
 
 <br>
 
 ### 🔗 Process description. 🥚🐣🐥
-#### 1. start setting
+
+> #### 1. Start setting
 > 1. Get some arguments in shell
 > 2. Set training environment such as using GPU
 > 3. Define model(Network) and optimizers
 > 4. Make Dataset(dataloader) -- cifar10
-> 5. Set lr scheduler
-> 6. and Define arch 
+> 5. and Define arch (only search process)
 
 
-#### 2. under training (alpha searching)
+> #### 2. Alpha searching (arch searching)
 ```
 1. ○ epoch loop
 2. ├─ set lr scheduler 
 3. ├─ set genotype
-4. ├─○ training loop (start stegit p loop (batch streaming))
+4. ├─○ training loop (batch streaming)
 5. │ ├─ dataset setting
 6. │ ├─○ arch stepping (architecture weight)
 7. │ │ ├─ run virtual step & get gradients
@@ -88,10 +93,23 @@
 14. output best model's genotype
 ```
 
-#### 3. under training (augmenting)
 
+> #### 3. optimizing searched model (run_from.py)
+```
+1. ○ epoch loop
+2. ├─ set lr scheduler 
+3. ├─ set dropout genotype
+4. ├─○ training loop
+5. │ ├─ dataset setting
+6. │ ├─ model training
+7. │ └─ model fitting()
+8. └─ validating loop
+9. output model's best score
+```
 
-
+<br>
+<br>
+<br>
 
 This project is referred from
 
