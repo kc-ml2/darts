@@ -65,6 +65,7 @@
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | Search       | 29hr | 99.9% | 91.3% | py3.6 // cuda10 // torch 1.0 | Titan V | epoch=100, dataset=cifar10, workers=12, batch_size=64 |
 | Train/Test   | 8hr  | 98.6% | 96.7% | py3.6 // cuda10 // torch 1.0 | Titan V | epoch=300, dataset=cifar10, workers=16, batch_size=96 |
+| Train/Test   | 24hr  | 99.0% | 97.2% | py3.6 // cuda10 // torch 1.0 | Titan V | **epoch=600**, dataset=cifar10, workers=16, batch_size=96 |
 
 <br>
 
