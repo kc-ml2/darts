@@ -1,225 +1,223 @@
-#!/usr/bin/env python
 # coding: utf-8
-
-
-# In[2]:
-
-
-import os,sys,time,glob
-import numpy as np
-import utils
-import argparse
+import os
 import torch
-import logging
 import torch.nn as nn
-from torch import optim
-import torchvision.datasets as dset
-import torch.backends.cudnn as cudnn
-
-from models.search import Network
-from models.arch import Arch
-
-
-# In[ ]:
+import numpy as np
+from tensorboardX import SummaryWriter
+from config import SearchConfig
+from tools import utils
+from models.search_cnn import SearchCNNController
+from architect import Architect
+from tools.visualize import plot
 
 
-parser = argparse.ArgumentParser("cifar")
-parser.add_argument('--data', type=str, default='../data', help="location of the data corpus")
-parser.add_argument('--batchsz', type=int, default=64, help="batch size")
-parser.add_argument('--lr', type=float, default=0.025, help='init learning rate')
-parser.add_argument('--lr_min', type=float, default=0.001, help='min learning rate')
-parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
-parser.add_argument('--wd',type=float, default=3e-4, help='weight decay')
-parser.add_argument('--report_freq', type=float, default=50, help='report frequency')
-parser.add_argument('--gpu', type=int, default=0, help='gpu device id')
-parser.add_argument('--epochs', type=int, default=50, help='num of training epochs')
-parser.add_argument('--init_ch', type=int, default=16, help='num of init channels')
-parser.add_argument('--layers',type=int, default=8, help='total number of layers')
-parser.add_argument('--model_path',type=str, default='saved_models', help='path to save the model')
-parser.add_argument('--cutout',action='store_true', default=False, help='use cutout')
-parser.add_argument('--cutout_len', type=int, default=16, help='cutout length')
-parser.add_argument('--drop_path_prob', type=float, default=0.3, help='drop path probability')
-parser.add_argument('--exp_path', type=str, default='search', help='experiment name')
-parser.add_argument('--seed',type=str, default=2, help='set random seed')
-parser.add_argument('--grad_clip', type=float, default=5, help='gradient clipping range')
-parser.add_argument('--train_portion', type=float, default=0.5, help='portion of training/val splitting')
-parser.add_argument('--unrolled', action='store_true', default=False, help='use one-step unrolled validation loss')
-parser.add_argument('--arch_lr', type=float, default=3e-4, help='learning rate for arch encoding')
-parser.add_argument('--arch_wd', type=float, default=1e-3, help='weight decay for arch encoding')
-args = parser.parse_args()
-
-args.exp_path += str(args.gpu)
-utils.create_exp_dir(args.exp_path, scripts_to_save=glob.glob('*.py'))
-
-log_format='%(asctime)s %(message)s'
-logging.basicConfig(stream=sys.stdout, level=logging.INFO,
-                    format=log_format, datefmt='%m/%d %I:%M:%S %p')
-fh = logging.FileHandler(os.path.join(args.exp_path, 'log.txt'))
-fh.setFormatter(logging.Formatter(log_format))
-logging.getLogger().addHandler(fh)
-
-os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
-device = torch.device('cuda:0')
 
 
-# In[ ]:
+config = SearchConfig()
+
+device = torch.device("cuda")
+
+# tensorboard
+tb_writer = SummaryWriter(log_dir=os.path.join(config.path, "tb"))
+tb_writer.add_text('config', config.as_markdown(), 0)
+
+logger = utils.get_logger(os.path.join(config.path, "{}.log".format(config.name)))
+config.print_params(logger.info)
+
+
 
 
 def main():
-    np.random.seed(args.seed)
-    cudnn.benchmark = True
-    cudnn.enabled= True
-    torch.manual_seed(args.seed)
+    logger.info("Logger is set - training start")
     
-    total, used = os.popen('nvidia-smi --query-gpu=memory.total,memory.used --format=csv,nounits,noheader'
-                        ).read().split('\n')[args.gpu].split(',')
-    total = int(total)
-    used = int(used)
+    torch.cuda.set_device(config.gpus[0])
     
-    print('GPU:',total,' used:',used)
+    # seed setting
+    np.random.seed(config.seed)
+    torch.manual_seed(config.seed)
+    torch.cuda.manual_seed_all(config.seed)
     
-    args.unrolled = True
+    torch.backends.cudnn.benchmark = True
     
-    logging.info("GPU device = %d"%args.gpu)
-    logging.info("args = %s"%args)
+    # get data with meta infomation
+    input_size, input_channels, n_classes, train_data = utils.get_data(
+        config.dataset, config.data_path, cutout_length=0, validation=False)
     
-    criterion = nn.CrossEntropyLoss().to(device)
-    model = Network(args.init_ch, 10, args.layers, criterion).to(device)
     
-    logging.info("total param size = %.4f MB",utils.count_parameters_in_MB(model))
+    # set model
+    net_crit = nn.CrossEntropyLoss().to(device)
+    model = SearchCNNController(input_channels, config.init_channels, n_classes, config.layers, net_crit, device_ids=config.gpus)
+    model = model.to(device)
     
-    optimizer = optim.SGD(model.parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd)
+    # weight optim
+    w_optim = torch.optim.SGD(model.weights(), config.w_lr, momentum=config.w_momentum, weight_decay=config.alpha_weight_decay)
     
-    train_transform, valid_transform = utils._data_transforms_cifar10(args)
-    train_data = dset.CIFAR10(root=args.data, train=True, download=True, transform=train_transform)
+    # alpha optim
+    alpha_optim = torch.optim.Adam(model.alphas(), config.alpha_lr, betas=(0.5,0.999), weight_decay=config.alpha_weight_decay)
     
-    num_train = len(train_data)
-    indices = list(range(num_train))
-    split = int(np.floor(args.train_portion * num_train))
+    # split data (train,validation)
+    n_train = len(train_data)
+    split = n_train // 2
+    indices = list(range(n_train))
+    train_sampler = torch.utils.data.sampler.SubsetRandomSampler(indices[:split])
+    valid_sampler = torch.utils.data.sampler.SubsetRandomSampler(indices[split:])
     
-    train_queue = torch.utils.data.DataLoader(
-        train_data, batch_size=args.batchsz,
-        sampler=torch.utils.data.sampler.SubsetRandomSampler(indices[:split]),
-        pin_memory=True, num_workers=2)
-
-#     train_queue = torch.utils.data.DataLoader(
-#         train_data, batch_size=args.batchsz, shuffle=True, pin_memory=True, num_workers=2)
-
-
-    valid_queue = torch.utils.data.DataLoader(
-        train_data, batch_size=args.batchsz,
-        sampler=torch.utils.data.sampler.SubsetRandomSampler(indices[split:]),
-        pin_memory=True, num_workers=2)
-
-#     valid_queue = torch.utils.data.DataLoader(
-#         valid_data, batch_size=args.batchsz, shuffle=False, pin_memory=True, num_workers=2)
+    train_loader = torch.utils.data.DataLoader(train_data,
+                                               batch_size = config.batch_size,
+                                               sampler=train_sampler,
+                                               num_workers=config.workers,
+                                               pin_memory=True)
+    valid_loader = torch.utils.data.DataLoader(train_data,
+                                               batch_size = config.batch_size,
+                                               sampler=valid_sampler,
+                                               num_workers=config.workers,
+                                               pin_memory=True)
     
-
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(
-                    optimizer, float(args.epochs), eta_min=args.lr_min)
+    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(w_optim, config.epochs, eta_min=config.w_lr_min)
     
-    arch = Arch(model, args)
+    arch = Architect(model, config.w_momentum, config.w_weight_decay)
     
-
-    for epoch in range(args.epochs):
+    # training loop-----------------------------------------------------------------------------
+    best_top1 = 0.
+    for epoch in range(config.epochs):
+        lr_scheduler.step()
+        lr=lr_scheduler.get_lr()[0]
+ 
+        model.print_alphas(logger)
+    
+        #training
+        train(train_loader, valid_loader, model, arch, w_optim, alpha_optim, lr, epoch)
         
-        scheduler.step()
-        lr = scheduler.get_lr()[0]
-        logging.info('\nEpoch: %d lr: %e',epoch, lr)
+        #validation
+        cur_step = (epoch+1) * len(train_loader)
+        top1 = validate(valid_loader, model, epoch, cur_step)
         
+        #log
+        #genotype
         genotype = model.genotype()
-        logging.info('Genotype : %s', genotype)
+        logger.info("genotype = {}".format(genotype))
         
-        train_acc, train_obj = train(train_queue, valid_queue, model, arch, criterion, optimizer, lr)
-        logging.info('train acc: %f', train_acc)
+        # genotype as a image
+        plot_path = os.path.join(config.plot_path, "EP{:02d}".format(epoch+1))
+        caption = "Epoch {}".format(epoch+1)
+        plot(genotype.normal, plot_path + "-normal", caption)
+        plot(genotype.reduce, plot_path + "-reduce", caption)
         
-        valid_acc, valid_obj = infer(valid_queue, model, criterion)
-        logging.info('valid acc: %f', valid_acc)
+        #save
+        if best_top1 < top1:
+            best_top1 = top1
+            best_genotype = genotype
+            is_best = True
+        else:
+            is_best = False
+        utils.save_checkpoint(model, config.path, is_best)
+        print("")
         
-        utils.save(model, os.path.join(args.exp_path, 'search.pt'))
-        
+    logger.info("Final best Prec@1 = {:.4%}".format(best_top1))
+    logger.info("Best Genotype is = {}".format(best_genotype))
 
 
-# In[ ]:
 
 
-def train(train_queue, valid_queue, model, arch, criterion, optimizer, lr):
-    
-    losses = utils.AverageMeter()
+def train(train_loader, valid_loader, model, arch, w_optim, alpha_optim, lr, epoch):
     top1 = utils.AverageMeter()
     top5 = utils.AverageMeter()
+    losses = utils.AverageMeter()
     
-    valid_iter = iter(valid_queue)
+    cur_step = epoch*len(train_loader)
+    tb_writer.add_scalar('train/lr',lr,cur_step)
     
-    for step, (x, target) in enumerate(train_queue):
+    model.train()
+    
+    for step, ((train_X, train_y), (valid_X, valid_y)) in enumerate(zip(train_loader, valid_loader)):
+        train_X, train_y = train_X.to(device, non_blocking=True), train_y.to(device, non_blocking=True)
+        valid_X, valid_y = valid_X.to(device, non_blocking=True), valid_y.to(device, non_blocking=True)
+        N = train_X.size(0)
         
-        batchsz = x.size(0)
-        model.train()
+        # arch step (alpha training)
+        alpha_optim.zero_grad()
+        arch.unrolled_backward(train_X, train_y, valid_X, valid_y, lr, w_optim)
+        alpha_optim.step()
         
-        x, target = x.to(device), target.cuda(non_blocking=True)
-        x_search, target_search = next(valid_iter)
-        x_search, target_search = x_search.to(device), target_search.cuda(non_blocking=True)
         
-        arch.step(x, target, x_search, target_search, lr, optimizer, unrolled=args.unrolled)
-        
-        logits = model(x)
-        loss = criterion(logits, target)
-        
-        optimizer.zero_grad()
+        # child network step (w)
+        w_optim.zero_grad()
+        logits = model(train_X)
+        loss = model.criterion(logits, train_y)
         loss.backward()
-        nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
-        optimizer.step()
         
-        prec1, prec5 = utils.accuracy(logits, target, topk=(1,5))
-        losses.update(loss.item(), batchsz)
-        top1.update(prec1.item(), batchsz)
-        top5.update(prec5.item(), batchsz)
+        # gradient clipping
+        nn.utils.clip_grad_norm_(model.weights(), config.w_grad_clip)
+        w_optim.step()
         
-        if step % args.report_freq == 0:
-            logging.info('Step:%03d loss:%f acc1:%f acc5:%f', step, losses.avg, top1.avg, top5.avg)
+        prec1, prec5 = utils.accuracy(logits, train_y, topk=(1,5))
+        losses.update(loss.item(), N)
+        top1.update(prec1.item(), N)
+        top5.update(prec5.item(), N)
+        
+        if step % config.print_freq == 0 or step == len(train_loader)-1:
+            print("\r",end="",flush=True)
+            logger.info(
+                "Train: [{:2d}/{}] Step {:03d}/{:03d} Loss {losses.avg:.3f} "
+                "Prec@(1,5) ({top1.avg:.1%}, {top5.avg:.1%})".format(epoch+1, config.epochs, step, len(train_loader)-1, losses=losses,
+                                                                     top1=top1, top5=top5))
+        else :
+            print("\rTrain: [{:2d}/{}] Step {:03d}/{:03d} Loss {losses.avg:.3f} "
+                "Prec@(1,5) ({top1.avg:.1%}, {top5.avg:.1%})".format(epoch+1, config.epochs, step, len(train_loader)-1, losses=losses,
+                                                                     top1=top1, top5=top5), end="",flush=True)
+        
+        tb_writer.add_scalar('train/loss', loss.item(), cur_step)
+        tb_writer.add_scalar('train/top1', prec1.item(), cur_step)
+        tb_writer.add_scalar('train/top5', prec5.item(), cur_step)
+        cur_step += 1
+        
+    logger.info("Train: [{:2d}/{}] Final Prec@1 {:.4%}".format(epoch+1, config.epochs, top1.avg))
 
-    return top1.avg, losses.avg
 
 
-# In[ ]:
 
-
-def infer(valid_queue, model, criterion):
-    losses = utils.AverageMeter()
+def validate(valid_loader, model, epoch, cur_step):
     top1 = utils.AverageMeter()
     top5 = utils.AverageMeter()
+    losses = utils.AverageMeter()
     
     model.eval()
     
     with torch.no_grad():
-        for step, (x, target) in enumerate(valid_queue):
+        for step, (X, y) in enumerate(valid_loader):
+            X, y = X.to(device, non_blocking=True), y.to(device, non_blocking=True)
+            N = X.size(0)
             
-            x, target = x.to(device), target.cuda(non_blocking=True)
-            batchsz = x.size(0)
+            logits = model(X)
+            loss = model.criterion(logits, y)
             
-            logits = model(x)
-            loss = criterion(logits, target)
+            prec1, prec5 = utils.accuracy(logits, y, topk=(1, 5))
+            losses.update(loss.item(), N)
+            top1.update(prec1.item(), N)
+            top5.update(prec5.item(), N)
             
-            prec1, prec5 = utils.accuracy(logits, target, topk=(1,5))
-            losses.update(loss.item(), batchsz)
-            top1.update(prec1.item(), batchsz)
-            top5.update(prec5.item(), batchsz)
-            
-            if step % args.report_freq == 0:
-                logging.info('>> Validation: %3d %e %f %f', step, losses.avg, top1.avg, top5.avg)
-                
-    return top1.avg, losses.avg
+            if step % config.print_freq == 0 or step == len(valid_loader)-1:
+                print("\r",end="",flush=True)
+                logger.info(
+                    "Valid: [{:2d}/{}] Step {:03d}/{:03d} Loss {losses.avg:.3f} "
+                    "Prec@(1,5) ({top1.avg:.1%}, {top5.avg:.1%})".format(epoch+1, config.epochs, step, len(valid_loader)-1, losses=losses,
+                                                                         top1=top1, top5=top5))
+            else :
+                print("\rValid: [{:2d}/{}] Step {:03d}/{:03d} Loss {losses.avg:.3f} "
+                    "Prec@(1,5) ({top1.avg:.1%}, {top5.avg:.1%})".format(epoch+1, config.epochs, step, len(valid_loader)-1, losses=losses,
+                                                                         top1=top1, top5=top5), end="",flush=True)
+    tb_writer.add_scalar('val/loss', losses.avg, cur_step)
+    tb_writer.add_scalar('val/top1', top1.avg, cur_step)
+    tb_writer.add_scalar('val/top5', top5.avg, cur_step)
+
+    logger.info("Valid: [{:2d}/{}] Final Prec@1 {:.4%}".format(epoch+1, config.epochs, top1.avg))
+
+    return top1.avg
+    
 
 
-# In[ ]:
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
-
-
-# In[ ]:
-
-
-
 
