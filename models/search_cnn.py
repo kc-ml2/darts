@@ -52,8 +52,17 @@ class CNN_Structure(nn.Module):
         self.cells = nn.ModuleList()
         reduction_p = False
         for i in range(n_layers):
-            # Reduce featuremap size and dougle channels in 1/3 and 2/3 layer.
-            if i in [n_layers//3, 2*n_layers//3]:
+            
+            # if layer setting is 2, then set one is normal and another is reduce.
+            if n_layers == 2: 
+                if i==1 :
+                    C_cur *= 2
+                    reduction = True
+                else:
+                    reduction = False
+                    
+            # Reduce featuremap size and double channels in 1/3 and 2/3 layer.
+            elif i in [n_layers//3, 2*n_layers//3]:
                 C_cur *= 2
                 reduction = True
             else:
@@ -109,7 +118,7 @@ class SearchCNNController(nn.Module):
             if 'alpha' in n:
                 self._alphas.append((n,p))
                 
-        self.net = CNN_Structure(C_in, C, n_classes, n_layers, n_nodes, stem_multiplier)
+        self.net = CNN_Structure(C_in, C, n_classes, n_layers, self.n_nodes, stem_multiplier)
         
     def forward(self, x):
         weights_normal = [F.softmax(alpha, dim=-1) for alpha in self.alpha_normal]
@@ -162,8 +171,8 @@ class SearchCNNController(nn.Module):
         gene_reduce = gt.parse(self.alpha_reduce, k=2)
         concat = range(2, 2+self.n_nodes) # concat all intermediate nodes
         
-        return gt.Genotype(normal = gene_normal, normal_concat = concat,
-                           reduce= gene_reduce, reduce_concat = concat)
+        return gt.Genotype(normal=gene_normal, normal_concat=concat,
+                           reduce=gene_reduce, reduce_concat=concat)
     
     def weights(self):
         return self.net.parameters()

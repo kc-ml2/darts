@@ -2,6 +2,7 @@
 import os
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 from tensorboardX import SummaryWriter
 from config import SearchConfig
@@ -46,7 +47,7 @@ def main():
     
     # set model
     net_crit = nn.CrossEntropyLoss().to(device)
-    model = SearchCNNController(input_channels, config.init_channels, n_classes, config.layers, net_crit, device_ids=config.gpus)
+    model = SearchCNNController(input_channels, config.init_channels, n_classes, config.layers, net_crit, n_nodes=config.nodes, device_ids=config.gpus)
     model = model.to(device)
     
     # weight optim
@@ -102,6 +103,14 @@ def main():
         caption = "Epoch {}".format(epoch+1)
         plot(genotype.normal, plot_path + "-normal", caption)
         plot(genotype.reduce, plot_path + "-reduce", caption)
+        
+        # output alpha per epochs to tensorboard data
+        for i, tensor in enumerate(model.alpha_normal):
+            for j, lsn in enumerate(F.softmax(tensor, dim=-1)):
+                tb_writer.add_scalars('epoch_alpha_normal/%d ~~ %d'%((j-2),i), {'max_pl3':lsn[0],'avg_pl3':lsn[1],'skip_cn':lsn[2],'sep_conv3':lsn[3],'sep_conv5':lsn[4],'dil_conv3':lsn[5],'dil_conv5':lsn[6],'none':lsn[7]}, epoch)
+        for i, tensor in enumerate(model.alpha_reduce):
+            for j, lsr in enumerate(F.softmax(tensor, dim=-1)):
+                tb_writer.add_scalars('epoch_alpha_reduce/%d ~~ %d'%((j-2),i), {'max_pl3':lsr[0],'avg_pl3':lsr[1],'skip_cn':lsr[2],'sep_conv3':lsr[3],'sep_conv5':lsr[4],'dil_conv3':lsr[5],'dil_conv5':lsr[6],'none':lsr[7]}, epoch)
         
         #save
         if best_top1 < top1:
@@ -169,6 +178,16 @@ def train(train_loader, valid_loader, model, arch, w_optim, alpha_optim, lr, epo
         tb_writer.add_scalar('train/loss', loss.item(), cur_step)
         tb_writer.add_scalar('train/top1', prec1.item(), cur_step)
         tb_writer.add_scalar('train/top5', prec5.item(), cur_step)
+        
+        
+        if step % (config.print_freq//5) == 0 or step == len(train_loader)-1: # not too much logging
+            for i, tensor in enumerate(model.alpha_normal):
+                for j, lsn in enumerate(F.softmax(tensor, dim=-1)):
+                    tb_writer.add_scalars('alpha_normal/%d ~~ %d'%((j-2),i), {'max_pl3':lsn[0],'avg_pl3':lsn[1],'skip_cn':lsn[2],'sep_conv3':lsn[3],'sep_conv5':lsn[4],'dil_conv3':lsn[5],'dil_conv5':lsn[6],'none':lsn[7]}, cur_step)
+            for i, tensor in enumerate(model.alpha_reduce):
+                for j, lsr in enumerate(F.softmax(tensor, dim=-1)):
+                    tb_writer.add_scalars('alpha_reduce/%d ~~ %d'%((j-2),i), {'max_pl3':lsr[0],'avg_pl3':lsr[1],'skip_cn':lsr[2],'sep_conv3':lsr[3],'sep_conv5':lsr[4],'dil_conv3':lsr[5],'dil_conv5':lsr[6],'none':lsr[7]}, cur_step)
+        
         cur_step += 1
         
     logger.info("Train: [{:2d}/{}] Final Prec@1 {:.4%}".format(epoch+1, config.epochs, top1.avg))
@@ -221,3 +240,5 @@ def validate(valid_loader, model, epoch, cur_step):
 if __name__ == "__main__":
     main()
 
+
+# > when you can calculate $x=cos(y)$, then 

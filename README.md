@@ -115,6 +115,8 @@
 <br>
 <br>
 
+it must show mathmatical like $ x=cos() $
+
 This project is referred from
 
 - DARTS https://arxiv.org/abs/1806.09055
