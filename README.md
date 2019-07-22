@@ -1,4 +1,4 @@
-# DARTS 🎯 playground 🧗‍
+# DARTS:Differentiable Architecture Search 🎯 - playground 🧗‍
 
 ### This repo is made for ML2's playground projects
  **🌏 running environment info** <br>
